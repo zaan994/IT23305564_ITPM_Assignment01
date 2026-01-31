@@ -309,8 +309,8 @@ const TEST_DATA = {
     {
       tcId: "Neg_Fun_004",
       name: "Multiple spaces handling",
-      input: "mata     oonee  eeka",
-      expected: "මට ඕනෑ ඒක",
+      input: "mama     heta aluth     vaahanayak gannavaa",
+      expected: "මම හෙට අලුත් වාහනයක් ගන්නවා",
       category: "Formatting (spaces / line breaks / paragraph)",
       grammar: "Simple sentence",
       length: "S",
@@ -375,7 +375,7 @@ const TEST_DATA = {
     tcId: "Pos_UI_001",
     name: "Verify real-time Sinhala output update",
     input: "mama heta gamee yanavaa",
-    partialInput: "mama heta",
+    partialInput: "mama heta gamee",
     expectedFull: "මම හෙට ගමේ යනවා",
     category: "Usability flow",
     grammar: "Future tense",
@@ -437,9 +437,31 @@ class TranslatorPage {
   }
 
   async performTranslation(inputText) {
+    const outputSelector = CONFIG.selectors.outputContainer;
+
+    // Read previous text safely
+    const previousText = await this.page
+      .locator(outputSelector)
+      .filter({ hasNot: this.page.locator("textarea") })
+      .first()
+      .textContent();
+
     await this.clearAndWait();
     await this.typeInput(inputText);
-    await this.waitForOutput();
+
+    // ✅ Wait for text to change INSIDE browser context
+    await this.page.waitForFunction(
+      (selector, prev) => {
+        const el = document.querySelector(selector);
+        return (
+          el && el.textContent && el.textContent.trim() !== (prev || "").trim()
+        );
+      },
+      outputSelector,
+      previousText,
+      { timeout: 30000 }
+    );
+
     return await this.getOutputText();
   }
 }
